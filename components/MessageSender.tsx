@@ -8,7 +8,8 @@ interface Props {
 
 function MessageSender({ }: Props): ReactElement {
   const [message, setMessage] = useState("");
-  const { sendPublicMessage: sendPublicMessageContext } = useContext(messagesContext);
+  const [to, setTo] = useState("");
+  const { sendPublicMessage: sendPublicMessageContext, sendPrivateMessage: sendPrivateMessageContext } = useContext(messagesContext);
   return (
     <VStack>
       <FormControl>
@@ -19,14 +20,30 @@ function MessageSender({ }: Props): ReactElement {
           onChangeText={text => setMessage(text)}
         />
       </FormControl>
+      <FormControl>
+        <FormControl.Label>Para</FormControl.Label>
+        <Input
+          type="text"
+          value={to}
+          onChangeText={text => setTo(text)}
+        />
+      </FormControl>
       <Button
-      mt="4"
-        onPress={sendPublicMessage}
+        mt="4"
+        onPress={sendMessage}
       >
         Enviar
       </Button>
     </VStack>
   )
+
+  async function sendMessage() {
+    if (!to) {
+      await sendPublicMessage();
+    } else {
+      await sendPrivateMessage();
+    }
+  }
 
   async function sendPublicMessage() {
     if (message.length) {
@@ -34,7 +51,20 @@ function MessageSender({ }: Props): ReactElement {
         content: message,
         latitude: 11,
         longitude: 11,
-        senderId: ""
+        senderId: "",
+        senderName: "Nombre"
+      })
+      setMessage("");
+    }
+  }
+
+  async function sendPrivateMessage() {
+    if (message.length) {
+      sendPrivateMessageContext({
+        content: message,
+        senderId: "",
+        senderName: "Nombre",
+        receiverId: to
       })
       setMessage("");
     }

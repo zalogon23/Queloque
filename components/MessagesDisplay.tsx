@@ -1,19 +1,22 @@
 import { Heading, Text, VStack } from 'native-base'
 import React, { ReactElement, useContext, useEffect, useState } from 'react'
-import { messagesContext, PublicMessage } from '../contexts/MessagesContext'
+import { messagesContext, PrivateMessage, PublicMessage } from '../contexts/MessagesContext'
 
 interface Props {
 
 }
 
 function MessagesDisplay({ }: Props): ReactElement {
-  const [messages, setMessages] = useState([] as PublicMessage[]);
-  const { onReceivePublicMessage, isConnected } = useContext(messagesContext);
+  const [messages, setMessages] = useState([] as (PublicMessage | PrivateMessage)[]);
+  const { onReceivePublicMessage, onReceivePrivateMessage, isConnected } = useContext(messagesContext);
 
   useEffect(() => {
     if (isConnected) {
       onReceivePublicMessage((publicMessage) => setMessages(prevMessages => (
         [...prevMessages, publicMessage]
+      )))
+      onReceivePrivateMessage((privateMessage) => setMessages(prevMessages => (
+        [...prevMessages, privateMessage]
       )))
     }
   }, [isConnected])

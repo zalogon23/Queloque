@@ -7,7 +7,9 @@ interface MessageContextProps {
   onReceivePublicMessage(reaction: (publicMessage: PublicMessage) => any): void,
   sendPublicMessage(publicMessage: PublicMessage): void,
   isConnected: boolean,
-  createConnection(getFreshToken: () => Promise<string>): void
+  createConnection(getFreshToken: () => Promise<string>): void,
+  onReceivePrivateMessage(reaction: (privateMessage: PrivateMessage) => any): void,
+  sendPrivateMessage(privateMessage: PrivateMessage): void
 }
 
 const messagesContext = createContext({} as MessageContextProps)
@@ -20,7 +22,14 @@ export interface PublicMessage {
   latitude: number,
   longitude: number,
   content: string,
-  senderId: string
+  senderId: string,
+  senderName: string
+}
+export interface PrivateMessage {
+  content: string,
+  senderId: string,
+  senderName: string,
+  receiverId: string
 }
 
 function MessagesProvider({ children }: Props): ReactElement {
@@ -30,6 +39,8 @@ function MessagesProvider({ children }: Props): ReactElement {
     <messagesContext.Provider value={{
       onReceivePublicMessage,
       sendPublicMessage,
+      onReceivePrivateMessage,
+      sendPrivateMessage,
       createConnection,
       isConnected
     }}>
@@ -45,7 +56,22 @@ function MessagesProvider({ children }: Props): ReactElement {
   }
   function sendPublicMessage(publicMessage: PublicMessage) {
     try {
-      connection?.invoke("SendMessage", publicMessage);
+      connection?.invoke("SendPublicMessage", publicMessage);
+    } catch (e: any) {
+      console.log(e.message)
+    }
+  }
+
+  function onReceivePrivateMessage(reaction: (privateMessage: PrivateMessage) => any) {
+    try {
+      connection?.on("ReceivePrivateMessage", (privateMessage) => reaction(privateMessage))
+    } catch (e: any) {
+      console.log(e.message)
+    }
+  }
+  function sendPrivateMessage(privateMessage: PrivateMessage) {
+    try {
+      connection?.invoke("SendPrivateMessage", privateMessage);
     } catch (e: any) {
       console.log(e.message)
     }

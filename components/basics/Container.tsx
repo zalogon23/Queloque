@@ -1,5 +1,6 @@
 import React, { ReactElement } from 'react'
 import { Container as NativeContainer, ScrollView } from "native-base"
+import { SafeAreaView } from 'react-native-safe-area-context'
 
 interface Props {
   children: any
@@ -7,14 +8,17 @@ interface Props {
 
 function Container({ children }: Props): ReactElement {
   return (
-    <ScrollView>
-      <NativeContainer
-        mx="auto"
-        py="6"
-      >
-        {children}
-      </NativeContainer>
-    </ScrollView>
+    <SafeAreaView>
+      <ScrollView>
+        <NativeContainer
+          mx="auto"
+          py="6"
+          alignItems="center"
+        >
+          {children}
+        </NativeContainer>
+      </ScrollView>
+    </SafeAreaView>
   )
 }
 

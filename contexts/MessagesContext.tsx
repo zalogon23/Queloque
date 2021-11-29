@@ -1,12 +1,13 @@
-import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
-import React, { createContext, ReactElement, useEffect, useState } from 'react'
+import { HttpTransportType, HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
+import React, { createContext, ReactElement, useContext, useEffect, useState } from 'react'
 import environment from '../lib/environment';
+import { userContext } from './UserContext';
 
 interface MessageContextProps {
   onReceivePublicMessage(reaction: (publicMessage: PublicMessage) => any): void,
-  setToken: React.Dispatch<React.SetStateAction<string>>,
   sendPublicMessage(publicMessage: PublicMessage): void,
-  isConnected: boolean
+  isConnected: boolean,
+  createConnection(getFreshToken: () => Promise<string>): void
 }
 
 const messagesContext = createContext({} as MessageContextProps)
@@ -25,29 +26,11 @@ export interface PublicMessage {
 function MessagesProvider({ children }: Props): ReactElement {
   const [connection, setConnection] = useState(null as null | HubConnection);
   const [isConnected, setIsConnected] = useState(false);
-  const [token, setToken] = useState("");
-  useEffect(() => {
-    if (token) {
-      const newConnection = new HubConnectionBuilder()
-        .withUrl(`${environment.domain}/chatHub`, {
-          accessTokenFactory: () => token
-        })
-        .withAutomaticReconnect()
-        .build()
-      setConnection(newConnection);
-      newConnection.start()
-        .then(() => {
-          console.log("Connected to the chat hub!")
-          setIsConnected(true);
-        })
-        .catch(err => console.log(err.message))
-    }
-  }, [token])
   return (
     <messagesContext.Provider value={{
       onReceivePublicMessage,
       sendPublicMessage,
-      setToken,
+      createConnection,
       isConnected
     }}>
       {children}
@@ -66,6 +49,26 @@ function MessagesProvider({ children }: Props): ReactElement {
     } catch (e: any) {
       console.log(e.message)
     }
+  }
+  function createConnection(getFreshToken: () => Promise<string>) {
+    const newConnection = new HubConnectionBuilder()
+      .withUrl(`${environment.domain}/chatHub`, {
+        accessTokenFactory: async () => {
+          const token = await getFreshToken()
+          console.log("This is the received token: " + token);
+          return token;
+        },
+        transport: HttpTransportType.LongPolling
+      })
+      .withAutomaticReconnect()
+      .build()
+    setConnection(newConnection);
+    newConnection.start()
+      .then(() => {
+        console.log("Connected to the chat hub!")
+        setIsConnected(true);
+      })
+      .catch(err => console.log(err.message))
   }
 }
 

@@ -1,23 +1,15 @@
 import { Box, Button, FormControl, Heading, Input, VStack } from 'native-base'
 import React, { ReactElement, useContext, useEffect, useState } from 'react'
-import { messagesContext } from '../contexts/MessagesContext';
 import { userContext } from '../contexts/UserContext';
-import environment from '../lib/environment';
 
 interface Props {
 
 }
 
 function LoginBox({ }: Props): ReactElement {
-  const { login, isUser, getToken } = useContext(userContext);
-  const { createConnection } = useContext(messagesContext);
+  const { login } = useContext(userContext);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  useEffect(() => {
-    if (isUser) {
-      createConnection(getToken)
-    }
-  }, [isUser])
   return (
     <VStack>
       <Heading

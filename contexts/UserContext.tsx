@@ -1,13 +1,12 @@
 import jwtDecode from 'jwt-decode';
-import React, { createContext, ReactElement, useEffect, useState } from 'react'
-import { AsyncStorage } from 'react-native';
+import React, { createContext, ReactElement, useState } from 'react'
 import environment from '../lib/environment';
 import storage from '../lib/storage';
 import { AuthenticationToken } from '../models/AuthenticationToken';
 
 interface UserContextProps {
   getToken(): Promise<string>,
-  isUser: boolean,
+  isLogged: boolean,
   login: (username: string, password: string) => void
 }
 
@@ -18,11 +17,11 @@ interface Props {
 }
 
 function UserProvider({ children }: Props): ReactElement {
-  const [isUser, setIsUser] = useState(false);
+  const [isLogged, setIsLogged] = useState(false);
   return (
     <userContext.Provider
       value={{
-        isUser,
+        isLogged,
         login,
         getToken
       }}
@@ -78,7 +77,7 @@ function UserProvider({ children }: Props): ReactElement {
     const authenticationToken = (await response.json()) as AuthenticationToken;
     await storage.save({ key: "token", data: authenticationToken.token });
     await storage.save({ key: "refresh-token", data: authenticationToken.refreshToken });
-    setIsUser(true);
+    setIsLogged(true);
   }
 }
 

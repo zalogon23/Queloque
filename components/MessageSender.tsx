@@ -1,15 +1,17 @@
 import { Button, FormControl, Input, VStack } from 'native-base'
 import React, { ReactElement, useContext, useState } from 'react'
 import { messagesContext } from '../contexts/MessagesContext';
+import { userContext } from '../contexts/UserContext';
+import { To } from '../screens/Chat';
 
 interface Props {
-
+  to: To
 }
 
-function MessageSender({ }: Props): ReactElement {
+function MessageSender({ to }: Props): ReactElement {
   const [message, setMessage] = useState("");
-  const [to, setTo] = useState("");
-  const { sendPublicMessage: sendPublicMessageContext, sendPrivateMessage: sendPrivateMessageContext } = useContext(messagesContext);
+  const { sendPublicMessage, sendPrivateMessage } = useContext(messagesContext);
+  const { user } = useContext(userContext);
   return (
     <VStack>
       <FormControl>
@@ -18,14 +20,6 @@ function MessageSender({ }: Props): ReactElement {
           type="text"
           value={message}
           onChangeText={text => setMessage(text)}
-        />
-      </FormControl>
-      <FormControl>
-        <FormControl.Label>Para</FormControl.Label>
-        <Input
-          type="text"
-          value={to}
-          onChangeText={text => setTo(text)}
         />
       </FormControl>
       <Button
@@ -38,33 +32,35 @@ function MessageSender({ }: Props): ReactElement {
   )
 
   async function sendMessage() {
-    if (!to) {
-      await sendPublicMessage();
+    if (!to.id) {
+      await sendPublicMessageLocal();
     } else {
-      await sendPrivateMessage();
+      await sendPrivateMessageLocal();
     }
   }
 
-  async function sendPublicMessage() {
+  async function sendPublicMessageLocal() {
+    if (!user) return;
     if (message.length) {
-      sendPublicMessageContext({
+      sendPublicMessage({
         content: message,
         latitude: 11,
         longitude: 11,
-        senderId: "",
-        senderName: "Nombre"
+        senderId: user.id,
+        senderName: user.username
       })
       setMessage("");
     }
   }
 
-  async function sendPrivateMessage() {
+  async function sendPrivateMessageLocal() {
+    if (!user) return;
     if (message.length) {
-      sendPrivateMessageContext({
+      sendPrivateMessage({
         content: message,
-        senderId: "",
-        senderName: "Nombre",
-        receiverId: to
+        senderId: user.id,
+        senderName: user.username,
+        receiverId: to.id
       })
       setMessage("");
     }

@@ -1,12 +1,13 @@
 import { Heading, Text, VStack } from 'native-base'
 import React, { ReactElement, useContext, useEffect, useState } from 'react'
 import { messagesContext, PrivateMessage, PublicMessage } from '../contexts/MessagesContext'
+import { To } from '../screens/Chat';
 
 interface Props {
-
+  setTo: React.Dispatch<React.SetStateAction<To>>
 }
 
-function MessagesDisplay({ }: Props): ReactElement {
+function MessagesDisplay({ setTo }: Props): ReactElement {
   const [messages, setMessages] = useState([] as (PublicMessage | PrivateMessage)[]);
   const { onReceivePublicMessage, onReceivePrivateMessage, isConnected } = useContext(messagesContext);
 
@@ -28,7 +29,16 @@ function MessagesDisplay({ }: Props): ReactElement {
             pt="4"
             key={`${message.content}-${message.senderId}`}
           >
-            <Heading>{message.senderId}</Heading>
+            <Heading
+              onPress={() => setTo(to => {
+                if (to.id == message.senderId) {
+                  return { id: "", username: "Todos" }
+                }
+                return { id: message.senderId, username: message.senderName }
+              })}
+            >
+              {message.senderName}
+            </Heading>
             <Text>{message.content}</Text>
           </VStack>
         ))

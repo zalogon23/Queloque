@@ -11,7 +11,13 @@ interface Props {
 
 }
 
+export interface To {
+  id: string,
+  username: string
+}
+
 function Chat({ }: Props): ReactElement {
+  const [to, setTo] = useState({ username: "Todos" } as To);
   const { getToken, isLogged } = useContext(userContext);
   const { createConnection } = useContext(messagesContext);
   useEffect(() => {
@@ -27,8 +33,11 @@ function Chat({ }: Props): ReactElement {
         Chat Publico
       </Heading>
       {!isLogged && <LoginBox />}
-      {isLogged && <MessageSender />}
-      <MessagesDisplay />
+      {isLogged && <MessageSender to={to} />}
+      {isLogged &&
+        <Heading>Para: {to.username}</Heading>
+      }
+      <MessagesDisplay setTo={setTo} />
     </Container>
   )
 }

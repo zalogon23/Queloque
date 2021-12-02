@@ -3,11 +3,13 @@ import React, { createContext, ReactElement, useState } from 'react'
 import environment from '../lib/environment';
 import storage from '../lib/storage';
 import { AuthenticationToken } from '../models/AuthenticationToken';
+import User from '../models/User';
 
 interface UserContextProps {
   getToken(): Promise<string>,
   isLogged: boolean,
-  login: (username: string, password: string) => void
+  login: (username: string, password: string) => void,
+  user: User | null
 }
 
 const userContext = createContext({} as UserContextProps);
@@ -18,9 +20,11 @@ interface Props {
 
 function UserProvider({ children }: Props): ReactElement {
   const [isLogged, setIsLogged] = useState(false);
+  const [user, setUser] = useState(null as User | null);
   return (
     <userContext.Provider
       value={{
+        user,
         isLogged,
         login,
         getToken
@@ -77,6 +81,24 @@ function UserProvider({ children }: Props): ReactElement {
     const authenticationToken = (await response.json()) as AuthenticationToken;
     await storage.save({ key: "token", data: authenticationToken.token });
     await storage.save({ key: "refresh-token", data: authenticationToken.refreshToken });
+
+    const responseUser = await fetch(`${environment.domain}/api/self`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": `bearer ${authenticationToken.token}`
+      }
+    });
+    if (!responseUser.ok) return;
+    const responseUserPayload = await responseUser.json() as User;
+    const createdUser = new User({
+      id: responseUserPayload.id,
+      username: responseUserPayload.username,
+      description: responseUserPayload.description,
+      avatar: responseUserPayload.avatar
+    });
+    setUser(createdUser);
     setIsLogged(true);
   }
 }

@@ -5,6 +5,10 @@ import storage from '../lib/storage';
 import { AuthenticationToken } from '../models/AuthenticationToken';
 import User from '../models/User';
 
+interface TokenClaims {
+  exp: number
+}
+
 interface UserContextProps {
   getToken(): Promise<string>,
   isLogged: boolean,
@@ -33,39 +37,45 @@ function UserProvider({ children }: Props): ReactElement {
       {children}
     </userContext.Provider>
   )
+
+
   async function getToken(): Promise<string> {
-    let token = "";
-    let refreshToken = "";
-    try {
-      const localToken = await storage.load<string>({ key: "token" });
-      token = localToken;
-      const localRefreshToken = await storage.load<string>({ key: "refresh-token" });
-      refreshToken = localRefreshToken;
-    } catch (err: any) {
-      console.log(err.message)
+    const localToken = await getLocalTokenByName("token");
+    const localRefreshToken = await getLocalTokenByName("refresh-token");
+    const decodedToken = jwtDecode<TokenClaims>(localToken);
+    const isTokenExpired = decodedToken.exp * 1000 < Date.now();
+    if (isTokenExpired && localRefreshToken) {
+      const authenticationTokens = await getRefreshedAuthenticationTokens(localRefreshToken);
+      const isSuccesfullyRefreshed = authenticationTokens !== null;
+      if (!isSuccesfullyRefreshed) return localToken;
+      await storeAuthenticationTokens(authenticationTokens);
+      return authenticationTokens.token;
     }
-    const decodedToken = jwtDecode<{ exp: number }>(token);
-    if (decodedToken.exp * 1000 < Date.now() && refreshToken) {
-      const response = await fetch(`${environment.domain}/api/refresh`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        body: JSON.stringify({
-          refreshToken
-        })
-      });
-      if (response.ok) {
-        const authenticationToken = (await response.json()) as AuthenticationToken;
-        await storage.save({ key: "token", data: authenticationToken.token });
-        await storage.save({ key: "refresh-token", data: authenticationToken.refreshToken });
-        return authenticationToken.token;
-      }
-    }
-    return token;
+    return localToken; // Default: ""
   }
-  async function login(username: string, password: string) {
+  async function login(
+    username: string,
+    password: string
+  ) {
+    try {
+      const authenticationTokens = await getAuthenticationTokens(username, password);
+      const isSuccesfullyAuthenticated = authenticationTokens !== null;
+      if (!isSuccesfullyAuthenticated) return;
+      await storeAuthenticationTokens(authenticationTokens)
+      const userData = await getSelf(authenticationTokens);
+      const isUserReceived = userData !== null;
+      if (!isUserReceived) return;
+      const user = createUser(userData);
+      setUser(user);
+      setIsLogged(true);
+    } catch (err: any) {
+      console.log(err.message);
+    }
+  }
+}
+
+async function getAuthenticationTokens(username: string, password: string): Promise<AuthenticationToken | null> {
+  try {
     const response = await fetch(`${environment.domain}/api/login`, {
       method: "POST",
       headers: {
@@ -77,12 +87,47 @@ function UserProvider({ children }: Props): ReactElement {
         password
       })
     });
-    if (!response.ok) return;
-    const authenticationToken = (await response.json()) as AuthenticationToken;
+    if (!response.ok) return null;
+    const authTokens = await response.json() as AuthenticationToken;
+    return authTokens;
+  } catch (err: any) {
+    console.log(err.message);
+    return null;
+  }
+}
+async function getRefreshedAuthenticationTokens(refreshToken: string): Promise<AuthenticationToken | null> {
+  try {
+    const response = await fetch(`${environment.domain}/api/refresh`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      body: JSON.stringify({
+        refreshToken
+      })
+    });
+    if (response.ok) {
+      const authenticationToken = await response.json() as AuthenticationToken;
+      return authenticationToken;
+    }
+    return null;
+  } catch (err: any) {
+    console.log(err.message);
+    return null;
+  }
+}
+async function storeAuthenticationTokens(authenticationToken: AuthenticationToken) {
+  try {
     await storage.save({ key: "token", data: authenticationToken.token });
     await storage.save({ key: "refresh-token", data: authenticationToken.refreshToken });
-
-    const responseUser = await fetch(`${environment.domain}/api/self`, {
+  } catch (err: any) {
+    console.log(err.message);
+  }
+}
+async function getSelf(authenticationToken: AuthenticationToken): Promise<User | null> {
+  try {
+    const response = await fetch(`${environment.domain}/api/self`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -90,16 +135,30 @@ function UserProvider({ children }: Props): ReactElement {
         "Authorization": `bearer ${authenticationToken.token}`
       }
     });
-    if (!responseUser.ok) return;
-    const responseUserPayload = await responseUser.json() as User;
-    const createdUser = new User({
-      id: responseUserPayload.id,
-      username: responseUserPayload.username,
-      description: responseUserPayload.description,
-      avatar: responseUserPayload.avatar
-    });
-    setUser(createdUser);
-    setIsLogged(true);
+    if (!response.ok) return null;
+    const user = await response.json() as User;
+    return user;
+  } catch (err: any) {
+    console.log(err.message);
+    return null;
+  }
+}
+function createUser(userData: User): User {
+  const user = new User({
+    id: userData.id,
+    username: userData.username,
+    description: userData.description,
+    avatar: userData.avatar
+  });
+  return user;
+}
+async function getLocalTokenByName(name: string): Promise<string> {
+  try {
+    const localToken = await storage.load<string>({ key: name });
+    return localToken;
+  } catch (err: any) {
+    console.log(err.message);
+    return "";
   }
 }
 

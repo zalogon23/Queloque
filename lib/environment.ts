@@ -1,5 +1,6 @@
+import Constants from "expo-constants";
 const environment = {
-  domain: "http://192.168.0.2:5002"
+  domain: `${Constants.manifest?.extra?.DOMAIN || "http://192.168.0.2"}:5002`
 };
 
 export default environment;

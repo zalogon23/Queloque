@@ -18,11 +18,11 @@ export interface To {
 
 function Chat({ }: Props): ReactElement {
   const [to, setTo] = useState({ username: "Todos" } as To);
-  const { getToken, isLogged } = useContext(userContext);
+  const { userServices, isLogged } = useContext(userContext);
   const { createConnection } = useContext(messagesContext);
   useEffect(() => {
     if (isLogged) {
-      createConnection(getToken)
+      createConnection(userServices.getToken)
     }
   }, [isLogged])
   return (

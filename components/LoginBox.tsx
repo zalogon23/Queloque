@@ -7,7 +7,7 @@ interface Props {
 }
 
 function LoginBox({ }: Props): ReactElement {
-  const { login } = useContext(userContext);
+  const { userServices } = useContext(userContext);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   return (
@@ -35,7 +35,7 @@ function LoginBox({ }: Props): ReactElement {
       </FormControl>
       <Button
         mt="4"
-        onPress={() => login(username, password)}
+        onPress={() => userServices.login(username, password)}
       >
         Enviar
       </Button>
